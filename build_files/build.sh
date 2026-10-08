@@ -13,12 +13,11 @@ curl -fsSL https://repo.librewolf.net/librewolf.repo -o /etc/yum.repos.d/librewo
 dnf5 install -y fedora-workstation-repositories
 
 ### Core packages (Fedora + RPM Fusion + LibreWolf)
-dnf5 install -y --enablerepo=rpmfusion-nonfree-steam \
+dnf5 install -y --enablerepo=rpmfusion-nonfree-steam --enablerepo=fedora-multimedia \
     kitty \
     evolution evolution-ews \
     libreoffice libreoffice-gtk3 \
     librewolf \
-    tmux \
     neovim \
     steam
 
