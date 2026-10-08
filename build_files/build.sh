@@ -4,7 +4,7 @@ set -ouex pipefail
 
 # Copy the contents of system_files/ of the git repo to /
 cp -avf "/ctx/system_files"/. /
-
+chmod +x /usr/share/ublue-os/privileged-setup.hooks.d/20-richyp-flatpaks.sh
 ### Repos
 # LibreWolf (official RPM repo)
 curl -fsSL https://repo.librewolf.net/librewolf.repo -o /etc/yum.repos.d/librewolf.repo
