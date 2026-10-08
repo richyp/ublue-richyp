@@ -9,8 +9,11 @@ cp -avf "/ctx/system_files"/. /
 # LibreWolf (official RPM repo)
 curl -fsSL https://repo.librewolf.net/librewolf.repo -o /etc/yum.repos.d/librewolf.repo
 
+### Steam repo (RPM Fusion nonfree-steam; disabled by default, used only via --enablerepo)
+dnf5 install -y fedora-workstation-repositories
+
 ### Core packages (Fedora + RPM Fusion + LibreWolf)
-dnf5 install -y \
+dnf5 install -y --enablerepo=rpmfusion-nonfree-steam \
     kitty \
     evolution evolution-ews \
     libreoffice libreoffice-gtk3 \
