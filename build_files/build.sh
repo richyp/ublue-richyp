@@ -5,23 +5,43 @@ set -ouex pipefail
 # Copy the contents of system_files/ of the git repo to /
 cp -avf "/ctx/system_files"/. /
 
-### Install packages
+### Repos
+# LibreWolf (official RPM repo)
+curl -fsSL https://repo.librewolf.net/librewolf.repo -o /etc/yum.repos.d/librewolf.repo
 
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
+### Core packages (Fedora + RPM Fusion + LibreWolf)
+dnf5 install -y \
+    kitty \
+    evolution evolution-ews \
+    libreoffice libreoffice-gtk3 \
+    librewolf \
+    tmux \
+    neovim \
+    steam
 
-# this installs a package from fedora repos
-dnf5 install -y tmux
+### Starship (official release binary, enabled for all bash users)
+curl -fsSL https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-musl.tar.gz \
+    | tar -xz -C /usr/bin
+cat > /etc/profile.d/starship.sh <<'EOF'
+[ -n "$BASH_VERSION" ] && [ -n "$PS1" ] && eval "$(starship init bash)"
+EOF
 
-# Use a COPR Example:
-#
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
+### LibreOffice: always use GTK3
+mkdir -p /usr/lib/environment.d
+echo 'SAL_USE_VCLPLUGIN=gtk3' > /usr/lib/environment.d/60-libreoffice-gtk3.conf
 
-#### Example for enabling a System Unit File
+### Orchis theme (system-wide)
+curl -fsSL https://github.com/vinceliuice/Orchis-theme/archive/refs/heads/master.tar.gz | tar -xz -C /tmp
+/tmp/Orchis-theme-master/install.sh -d /usr/share/themes
+rm -rf /tmp/Orchis-theme-master
 
+### Default Flatpaks: remove unwanted, add your own
+BREWFILE=/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
+sed -i -e '/org.mozilla.thunderbird/d' -e '/org.mozilla.firefox/d' "$BREWFILE"
+cat >> "$BREWFILE" <<'EOF'
+flatpak "com.heroicgameslauncher.hgl"
+flatpak "io.github.Faugus.faugus-launcher"
+EOF
+
+### Services
 systemctl enable podman.socket
