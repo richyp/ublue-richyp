@@ -39,7 +39,11 @@ rm -rf /tmp/Orchis-theme-master
 
 ### Default Flatpaks: remove unwanted, add your own
 BREWFILE=/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
-sed -i -e '/org.mozilla.thunderbird/d' -e '/org.mozilla.firefox/d' "$BREWFILE"
+sed -i \
+    -e '/org.mozilla.thunderbird/d' \
+    -e '/org.mozilla.firefox/d' \
+    -e '/org.kde.kontact/d' \
+    "$BREWFILE"
 cat >> "$BREWFILE" <<'EOF'
 flatpak "com.heroicgameslauncher.hgl"
 flatpak "io.github.Faugus.faugus-launcher"
