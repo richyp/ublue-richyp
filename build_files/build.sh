@@ -52,11 +52,14 @@ printf 'EDITOR=nvim\nVISUAL=nvim\n' > /usr/lib/environment.d/50-neovim-editor.co
 ##   python3-fonttools  - collection cover art (make-collection-art)
 ##   mame-tools         - chdman, for zip2chd
 ##   waypipe            - run GUI apps from richy-server/richy-box on this desktop
+##   zenity, newt       - EmuDeck's installer runs `rpm-ostree install` for these if they're missing
 dnf5 install -y \
     syncthing \
     python3-fonttools \
     mame-tools \
-    waypipe
+    waypipe \
+    zenity \
+    newt
 # Syncthing runs per user; enable its user unit for everyone (it starts at login)
 systemctl --global enable syncthing.service
 
