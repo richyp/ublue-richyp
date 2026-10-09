@@ -1,0 +1,4 @@
+# adb over USB without root: give the logged-in user access to any USB device with an ADB interface
+# (class ff / subclass 42 / protocol 01) - e.g. the Retroid for handheld-sync/android-sync.
+# Fedora has no android-udev-rules package. Must sort before 73-seat-late.rules, which applies uaccess.
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_INTERFACES}=="*:ff4201:*", TAG+="uaccess"

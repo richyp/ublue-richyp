@@ -21,6 +21,30 @@ dnf5 install -y --enablerepo=rpmfusion-nonfree-steam --enablerepo=fedora-multime
     neovim \
     steam
 
+### Gaming tools for native Steam / Proton. gamemode (64-bit) is already in Aurora; the .i686 builds are
+## for 32-bit games. MangoHud's config comes from the dotfiles (mangohud package).
+dnf5 install -y \
+    gamescope \
+    mangohud mangohud.i686 \
+    gamemode.i686
+
+### Dev: stow (dotfiles are Stow packages) and the .NET 10 SDK (current LTS, Fedora's own build).
+## Already in Aurora-DX and needed by the dotfiles' neovim config: gcc/make + tree-sitter CLI (treesitter
+## grammars compile locally), node/npm, python3, unzip, curl, git (mason installs the language servers
+## into ~/.local/share/nvim/mason on first start). Node versions per project come from nvm in $HOME.
+dnf5 install -y \
+    stow \
+    dotnet-sdk-10.0
+
+### Neovim as the default editor for everyone (root, sudo -e, new users, GUI apps), before dotfiles.
+## Fedora's nano-default-editor only sets EDITOR when it is unset, and 00- sorts before it.
+cat > /etc/profile.d/00-neovim-editor.sh <<'EOF'
+export EDITOR=nvim VISUAL=nvim
+if [ -n "$BASH_VERSION" ] && [ -n "$PS1" ]; then alias vi=nvim vim=nvim; fi
+EOF
+mkdir -p /usr/lib/environment.d
+printf 'EDITOR=nvim\nVISUAL=nvim\n' > /usr/lib/environment.d/50-neovim-editor.conf
+
 ### Emulation setup (~/Emulation/setup) - tools its scripts need that Aurora-DX lacks.
 ## Already in the base: python3-pillow, android-tools (adb), 7z, rsync, unzip, nfs-utils, cifs-utils,
 ## fuse-libs (AppImages: ES-DE, Cemu, ...), udisks2.
