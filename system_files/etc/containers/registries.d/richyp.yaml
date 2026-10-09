@@ -1,0 +1,3 @@
+docker:
+  ghcr.io/richyp:
+    use-sigstore-attachments: true

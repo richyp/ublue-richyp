@@ -64,7 +64,17 @@ sed -i \
     -e '/org.mozilla.thunderbird/d' \
     -e '/org.mozilla.firefox/d' \
     -e '/org.kde.kontact/d' \
+    -e '/io.github.kolunmi.Bazaar/d' \
     "$BREWFILE"
+
+### Discover instead of Bazaar: Flatpaks + KDE Store only. No rpm-ostree/PackageKit/offline-update
+## backends or update notifier - the OS image is updated by uupd, and two updaters would compete.
+## install_weak_deps=False stops those backends coming in as recommendations.
+dnf5 install -y --setopt=install_weak_deps=False \
+    plasma-discover \
+    plasma-discover-flatpak \
+    plasma-discover-kns
+! rpm -q plasma-discover-rpm-ostree plasma-discover-packagekit plasma-discover-notifier >/dev/null
 
 ### Identity: this is ublue-richyp, not Universal Blue's aurora-dx
 ## Aurora's tools read image-info.json to decide what to update/rebase to (ujust toggle-devmode,
@@ -75,6 +85,16 @@ jq '."image-name" = "ublue-richyp"
   | ."image-tag" = "latest"' \
     /usr/share/ublue-os/image-info.json > /tmp/image-info.json
 mv /tmp/image-info.json /usr/share/ublue-os/image-info.json
+## Trust images signed with this repo's cosign key (cosign.pub, copied in via system_files to
+## /usr/lib/pki/containers/richyp.pub; registries.d/richyp.yaml tells podman/bootc where the signatures
+## are). With this, `bootc switch --enforce-container-sigpolicy ghcr.io/richyp/ublue-richyp:latest`
+## makes the install refuse any image not signed by the workflow.
+jq '.transports.docker."ghcr.io/richyp" = [{
+      "type": "sigstoreSigned",
+      "keyPaths": ["/usr/lib/pki/containers/richyp.pub"],
+      "signedIdentity": {"type": "matchRepository"}
+    }]' /etc/containers/policy.json > /tmp/policy.json
+mv /tmp/policy.json /etc/containers/policy.json
 ## "Aurora Preferences" in System Settings switches stream / DX / GPU driver by rebasing to one of
 ## Universal Blue's images - which would silently replace this image. Nothing else depends on it.
 dnf5 remove -y kcm_ublue
