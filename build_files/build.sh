@@ -78,9 +78,15 @@ sed -i 's|^Exec=libreoffice|Exec=/usr/libexec/libreoffice-xwayland|' \
 grep -q 'Exec=/usr/libexec/libreoffice-xwayland' /usr/share/applications/libreoffice-writer.desktop
 
 ### Orchis theme (system-wide)
+## The GTK CSS is compiled from SCSS by parse-sass.sh, which needs sassc. Without it the installer still
+## "succeeds" but ships a theme with only assets/ (no gtk.css), so GTK apps silently fall back to Adwaita.
+dnf5 install -y sassc
 curl -fsSL https://github.com/vinceliuice/Orchis-theme/archive/refs/heads/master.tar.gz | tar -xz -C /tmp
+(cd /tmp/Orchis-theme-master && ./parse-sass.sh)
 /tmp/Orchis-theme-master/install.sh -d /usr/share/themes
 rm -rf /tmp/Orchis-theme-master
+test -s /usr/share/themes/Orchis-Light/gtk-3.0/gtk.css
+test -s /usr/share/themes/Orchis-Light/gtk-4.0/gtk.css
 
 ### Default Flatpaks: remove unwanted, add your own
 BREWFILE=/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
@@ -179,7 +185,10 @@ setkeys(f"{kp}/kscreenlockerrc", "Greeter][Wallpaper][org.kde.image][General",
         {"Image": nuvole, "PreviewImage": nuvole})
 PY
 cat > "$KP/kglobalshortcutsrc" <<'EOF'
-[plasmashell]
+[kwin]
+Edit Tiles=none,Meta+T,Toggle Tiles Editor
+
+[org_kde_powerdevil]
 powerProfile=Battery,Battery\tMeta+B,Switch Power Profile
 
 [services][kitty.desktop]
