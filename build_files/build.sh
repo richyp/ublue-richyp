@@ -66,6 +66,19 @@ sed -i \
     -e '/org.kde.kontact/d' \
     "$BREWFILE"
 
+### Identity: this is ublue-richyp, not Universal Blue's aurora-dx
+## Aurora's tools read image-info.json to decide what to update/rebase to (ujust toggle-devmode,
+## ublue-rollback-helper, the motd). Left as-is they would point at ghcr.io/ublue-os/aurora-dx.
+jq '."image-name" = "ublue-richyp"
+  | ."image-vendor" = "richyp"
+  | ."image-ref" = "ostree-image-signed:docker://ghcr.io/richyp/ublue-richyp"
+  | ."image-tag" = "latest"' \
+    /usr/share/ublue-os/image-info.json > /tmp/image-info.json
+mv /tmp/image-info.json /usr/share/ublue-os/image-info.json
+## "Aurora Preferences" in System Settings switches stream / DX / GPU driver by rebasing to one of
+## Universal Blue's images - which would silently replace this image. Nothing else depends on it.
+dnf5 remove -y kcm_ublue
+
 ### Services
 firewall-offline-cmd --add-service=samba
 systemctl enable podman.socket
