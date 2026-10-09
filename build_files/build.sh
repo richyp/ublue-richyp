@@ -67,6 +67,32 @@ sed -i \
     -e '/io.github.kolunmi.Bazaar/d' \
     "$BREWFILE"
 
+### Mullvad VPN (official repo). Its app installs to "/opt/Mullvad VPN", but on bootc /opt is /var/opt,
+## which only reaches a machine at its first install and never updates. So move the app into /usr/lib
+## (part of the image), point the launcher there, and keep a link at the old path for anything else.
+curl -fsSL https://repository.mullvad.net/rpm/stable/mullvad.repo -o /etc/yum.repos.d/mullvad.repo
+mkdir -p /var/opt
+dnf5 install -y mullvad-vpn
+mv "/var/opt/Mullvad VPN" /usr/lib/mullvad-vpn
+sed -i 's|/opt/Mullvad VPN|/usr/lib/mullvad-vpn|g' /usr/share/applications/mullvad-vpn.desktop
+echo 'L "/var/opt/Mullvad VPN" - - - - /usr/lib/mullvad-vpn' > /usr/lib/tmpfiles.d/mullvad-vpn.conf
+systemctl enable mullvad-daemon.service mullvad-early-boot-blocking.service
+
+### Desktop extras: Quickshell (Fedora repo) and Darkly (Qt style + window decoration; upstream
+## publishes a Fedora RPM with each release). Darkly is optional: it is built against particular
+## Plasma/Qt versions, so if its RPM is missing for this Fedora or won't install, the build carries on
+## without it rather than failing.
+dnf5 install -y quickshell
+FEDORA=$(rpm -E %fedora)
+DARKLY_URL=$(curl -fsSL https://api.github.com/repos/Bali10050/Darkly/releases/latest \
+    | jq -r --arg f ".fc${FEDORA}.x86_64.rpm" '.assets[] | select(.name | endswith($f)) | .browser_download_url' | head -1)
+if [ -n "$DARKLY_URL" ] && curl -fsSL "$DARKLY_URL" -o /tmp/darkly.rpm && dnf5 install -y /tmp/darkly.rpm; then
+    echo "Darkly installed from $DARKLY_URL"
+else
+    echo "WARNING: Darkly not installed (no fc${FEDORA} RPM in the latest release, or it failed to install)"
+fi
+rm -f /tmp/darkly.rpm
+
 ### Discover instead of Bazaar: Flatpaks + KDE Store only. No rpm-ostree/PackageKit/offline-update
 ## backends or update notifier - the OS image is updated by uupd, and two updaters would compete.
 ## install_weak_deps=False stops those backends coming in as recommendations.
@@ -74,7 +100,9 @@ dnf5 install -y --setopt=install_weak_deps=False \
     plasma-discover \
     plasma-discover-flatpak \
     plasma-discover-kns
-! rpm -q plasma-discover-rpm-ostree plasma-discover-packagekit plasma-discover-notifier >/dev/null
+for p in plasma-discover-rpm-ostree plasma-discover-packagekit plasma-discover-notifier; do
+    if rpm -q "$p" >/dev/null; then echo "ERROR: $p got installed - it would compete with uupd"; exit 1; fi
+done
 
 ### Identity: this is ublue-richyp, not Universal Blue's aurora-dx
 ## Aurora's tools read image-info.json to decide what to update/rebase to (ujust toggle-devmode,
