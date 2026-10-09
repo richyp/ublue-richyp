@@ -127,6 +127,89 @@ dnf5 install -y --setopt=install_weak_deps=False \
 for p in plasma-discover-rpm-ostree plasma-discover-packagekit plasma-discover-notifier; do
     if rpm -q "$p" >/dev/null; then echo "ERROR: $p got installed - it would compete with uupd"; exit 1; fi
 done
+## Aurora's default panel (both look-and-feel layouts) and app-menu favourites pin Bazaar - point them
+## at Discover so new users don't get a dead launcher.
+sed -i 's/io\.github\.kolunmi\.Bazaar\.desktop/org.kde.discover.desktop/g' \
+    /usr/share/plasma/look-and-feel/dev.getaurora.aurora*.desktop/contents/layouts/org.kde.plasma.desktop-layout.js \
+    /usr/share/kde-settings/kde-profile/default/xdg/kicker-extra-favoritesrc
+test -f /usr/share/applications/org.kde.discover.desktop
+! grep -rq 'kolunmi.Bazaar' /usr/share/plasma/look-and-feel/dev.getaurora.aurora*.desktop \
+    /usr/share/kde-settings/kde-profile/default/xdg/kicker-extra-favoritesrc || { echo "ERROR: Bazaar still pinned"; exit 1; }
+
+### Desktop defaults for new users (Aurora's KDE profile, read before the stock KDE settings):
+## kitty instead of Konsole, LibreWolf as browser, Evolution for mail + calendar, and Rich's Meta+ shortcuts.
+KP=/usr/share/kde-settings/kde-profile/default/xdg
+## Plasma's own app-launcher icon instead of Aurora's logo, and the Nuvole wallpaper (ships with Plasma).
+LNF_SCRIPTS=(/usr/share/plasma/look-and-feel/dev.getaurora.aurora*.desktop/contents/plasmoidsetupscripts)
+sed -i '/writeConfig("icon", "distributor-logo-symbolic")/d' "${LNF_SCRIPTS[@]/%//org.kde.plasma.kickoff.js}"
+sed -i 's|writeConfig("Image", "[^"]*")|writeConfig("Image", "file:///usr/share/wallpapers/Nuvole/")|' \
+    "${LNF_SCRIPTS[@]/%//org.kde.plasma.folder.js}"
+test -d /usr/share/wallpapers/Nuvole
+! grep -q distributor-logo "${LNF_SCRIPTS[@]/%//org.kde.plasma.kickoff.js}" || { echo "ERROR: launcher icon not reset"; exit 1; }
+grep -q 'wallpapers/Nuvole' "${LNF_SCRIPTS[@]/%//org.kde.plasma.folder.js}"
+sed -i 's/org\.kde\.konsole\.desktop/kitty.desktop/g' \
+    /usr/share/plasma/look-and-feel/dev.getaurora.aurora*.desktop/contents/layouts/org.kde.plasma.desktop-layout.js \
+    "$KP/kicker-extra-favoritesrc"
+python3 - "$KP" <<'PY'
+import configparser, sys
+kp = sys.argv[1]
+def setkeys(path, section, keys):
+    c = configparser.RawConfigParser(delimiters=("=",), strict=False, interpolation=None)
+    c.optionxform = str
+    c.read(path)
+    if not c.has_section(section): c.add_section(section)
+    for k, v in keys.items(): c.set(section, k, v)
+    with open(path, "w") as f: c.write(f, space_around_delimiters=False)
+web = "librewolf.desktop"; evo = "org.gnome.Evolution.desktop"
+setkeys(f"{kp}/kde-mimeapps.list", "Default Applications", {
+    "x-scheme-handler/http": web, "x-scheme-handler/https": web,
+    "text/html": web, "application/xhtml+xml": web,
+    "x-scheme-handler/mailto": evo, "text/calendar": evo, "text/x-vcalendar": evo,
+})
+setkeys(f"{kp}/kdeglobals", "General", {"TerminalApplication": "kitty", "TerminalService": "kitty.desktop",
+                                        "ColorScheme": "BreezeLight"})
+# Light mode: Aurora's own light global theme (same layout, Breeze Light colours + breeze icons).
+# Aurora puts ColorScheme under [KDE] too, so set it in both places.
+setkeys(f"{kp}/kdeglobals", "KDE", {"LookAndFeelPackage": "dev.getaurora.auroralight.desktop",
+                                    "ColorScheme": "BreezeLight"})
+setkeys(f"{kp}/kdeglobals", "Icons", {"Theme": "breeze"})
+# Lock screen wallpaper to match the desktop
+nuvole = "file:///usr/share/wallpapers/Nuvole/"
+setkeys(f"{kp}/kscreenlockerrc", "Greeter][Wallpaper][org.kde.image][General",
+        {"Image": nuvole, "PreviewImage": nuvole})
+PY
+cat > "$KP/kglobalshortcutsrc" <<'EOF'
+[plasmashell]
+powerProfile=Battery,Battery\tMeta+B,Switch Power Profile
+
+[services][kitty.desktop]
+_launch=Meta+T
+
+[services][librewolf.desktop]
+_launch=Meta+B
+new-private-window=Meta+Shift+P
+
+[services][org.gnome.Evolution.desktop]
+calendar=Meta+C
+mail=Meta+M
+
+[services][org.kde.dolphin.desktop]
+_launch=Meta+F
+
+[services][org.kde.kate.desktop]
+_launch=Meta+E
+
+[services][org.kde.spectacle.desktop]
+CurrentMonitorScreenShot=Meta+#
+FullScreenScreenShot=Shift+Print\tMeta+Ctrl+#
+RecordRegion=Meta+%
+RecordWindow=Meta+Ctrl+%
+RectangularRegionScreenShot=Meta+$\tMeta+Shift+Print
+WindowUnderCursorScreenShot=Meta+Ctrl+$\tMeta+Ctrl+Print
+EOF
+grep -q 'kitty.desktop' "$KP/kicker-extra-favoritesrc"
+grep -q '^TerminalApplication=kitty' "$KP/kdeglobals"
+grep -q '^x-scheme-handler/https=librewolf.desktop' "$KP/kde-mimeapps.list"
 
 ### Identity: this is ublue-richyp, not Universal Blue's aurora-dx
 ## Aurora's tools read image-info.json to decide what to update/rebase to (ujust toggle-devmode,
