@@ -100,6 +100,15 @@ sed -i \
     -e '/io.github.kolunmi.Bazaar/d' \
     "$BREWFILE"
 
+### KDE apps as RPMs instead of Aurora's Flatpaks: they then use the system Qt style (Kvantum/OrchisGtk),
+## KDE dialogs and KIO like the rest of Plasma, and Fedora's builds are usually newer. Drop them from the
+## default Flatpak list so first boot doesn't install a second copy.
+KDE_APPS="okular gwenview kcalc kclock kweather qrca skanpage haruna"
+dnf5 install -y $KDE_APPS
+for a in $KDE_APPS; do sed -i "/\"org\.kde\.$a\"/d" "$BREWFILE"; done
+! grep -qE '"org\.kde\.(okular|gwenview|kcalc|kclock|kweather|qrca|skanpage|haruna)"' "$BREWFILE" \
+    || { echo "ERROR: KDE apps still in the default Flatpak list"; exit 1; }
+
 ### Mullvad VPN (official repo). Its app installs to "/opt/Mullvad VPN", but on bootc /opt is /var/opt,
 ## which only reaches a machine at its first install and never updates. So move the app into /usr/lib
 ## (part of the image), point the launcher there, and keep a link at the old path for anything else.
