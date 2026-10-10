@@ -111,11 +111,12 @@ sed -i 's|/opt/Mullvad VPN|/usr/lib/mullvad-vpn|g' /usr/share/applications/mullv
 echo 'L "/var/opt/Mullvad VPN" - - - - /usr/lib/mullvad-vpn' > /usr/lib/tmpfiles.d/mullvad-vpn.conf
 systemctl enable mullvad-daemon.service mullvad-early-boot-blocking.service
 
-### Desktop extras: Quickshell (Fedora repo) and Darkly (Qt style + window decoration; upstream
-## publishes a Fedora RPM with each release). Darkly is optional: it is built against particular
-## Plasma/Qt versions, so if its RPM is missing for this Fedora or won't install, the build carries on
-## without it rather than failing.
-dnf5 install -y quickshell
+### Desktop extras: Quickshell and Kvantum (Fedora repo) and Darkly (Qt style + window decoration;
+## upstream publishes a Fedora RPM with each release). Kvantum is the Qt style engine that themes Plasma/Qt
+## apps to match a GTK theme (Rich uses Orchis-kde's Kvantum theme, installed per user); inert until chosen.
+## Darkly is optional: it is built against particular Plasma/Qt versions, so if its RPM is missing for this
+## Fedora or won't install, the build carries on without it rather than failing.
+dnf5 install -y quickshell kvantum
 FEDORA=$(rpm -E %fedora)
 DARKLY_URL=$(curl -fsSL https://api.github.com/repos/Bali10050/Darkly/releases/latest \
     | jq -r --arg f ".fc${FEDORA}.x86_64.rpm" '.assets[] | select(.name | endswith($f)) | .browser_download_url' | head -1)
